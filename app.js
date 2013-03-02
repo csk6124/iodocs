@@ -651,6 +651,13 @@ app.dynamicHelpers({
     },
     apiDefinition: function(req, res) {
         if (req.params.api) {
+            
+            // FM:SJP return definition loaded from URL, if present
+            console.dir(apisConfig[req.params.api]);
+            if(apisConfig[req.params.api].__definition) {
+                return apisConfig[req.params.api].__definition;
+            }
+
             var data = fs.readFileSync(__dirname + '/public/data/' + req.params.api + '.json');
             return JSON.parse(data);
         }
@@ -715,9 +722,20 @@ app.all(/^\/service(?:\/(\d+))?$/, function(req, res) {
 // API shortname, all lowercase
 app.get('/:api([^\.]+)', function(req, res) {
     req.params.api=req.params.api.replace(/\/$/,'');
-    res.render('api');
-});
 
+    if(apisConfig[req.params.api].apiDefURL) {
+        rest.get(apisConfig[req.params.api].apiDefURL).on('complete', function(result) {
+            if(false == (result instanceof Error)) {
+                apisConfig[req.params.api].__definition = result;
+            }
+
+            res.render('api');
+        });
+    }
+    else {
+        res.render('api');
+    }
+});
 
 // Only listen on $ node app.js
 if (!module.parent) {
