@@ -43,6 +43,8 @@ mixin displayParameters(parameters, path)
                                          option(value=choice) #{choice}
                     - else if (parameter.Type == 'readonly')
                         input(name=paramName, value=parameter.Default, placeholder=className, readonly='readonly')
+                    - else if (parameter.Type == 'password')
+                        input(type="password", name=paramName, value=parameter.Default, placeholder=className)
                     - else
                         input(name=paramName, value=parameter.Default, placeholder=className)
             td.type=(parameter.Type != 'parent' ? parameter.Type : '')
