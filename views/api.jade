@@ -43,6 +43,8 @@ mixin displayParameters(parameters, path)
                                          option(value=choice) #{choice}
                     - else if (parameter.Type == 'readonly')
                         input(name=paramName, value=parameter.Default, placeholder=className, readonly='readonly')
+                    - else if (parameter.Type == 'file')
+                        input(type="file", name=parameter.Name)
                     - else if (parameter.Type == 'password')
                         input(type="password", name=paramName, value=parameter.Default, placeholder=className)
                     - else
@@ -142,7 +144,7 @@ ul
                             span.http-method #{method.HTTPMethod}
                             span.name #{method.MethodName}
                             span.uri #{method.URI}
-                        form.hidden
+                        form(class="hidden", method="post", enctype="multipart/form-data")
                             input(type='hidden', name='httpMethod', value=method.HTTPMethod)
                             input(type='hidden', name='oauth', value=secure)
                             input(type='hidden', name='methodUri', value=method.URI)

@@ -34,6 +34,7 @@ var express     = require('express'),
     https       = require('https'),
     crypto      = require('crypto'),
     redis       = require('redis'),
+    rest        = require('restler'),
     RedisStore  = require('connect-redis')(express);
 
 // Configuration
@@ -550,21 +551,21 @@ function processRequest(req, res, next) {
             }
         }
         
-        var sendData = ''
-        if (options.method == 'GET' || options.method == 'DELETE') {
-            if (!options.headers['Content-Length']) {
-                options.headers['Content-Length'] = 0;
-            }
-        }
-        else if (options.method == 'POST' || options.method == 'PUT') {
-            if (dataFormat && dataFormat == 'json') {
-                options.headers['Content-Type'] = 'application/json';
-                sendData = JSON.stringify(params)
-            }
-            else {
-                options.headers['Content-Type'] = 'application/x-www-form-urlencoded';
-                sendData = query.stringify(params);
-            }
+        var pathparts = options.path.split("?");
+        pathparts.push("");
+        var reqURL = url.format({
+            protocol: apiConfig.protocol,
+            host: apiConfig.baseURL,
+            pathname: pathparts[0],
+            search: pathparts[1]
+        });
+
+        options.data = params;
+
+        for(i in req.files) {
+            options.multipart = true;
+            var f = req.files[i];
+            params[i] = rest.file(f.path, null, f.size, null, f.mime);
         }
 
         console.log(util.inspect(params));
@@ -572,81 +573,45 @@ function processRequest(req, res, next) {
         if (config.debug) {
             console.log(util.inspect(options));
         };
-        
-        var doRequest;
-        if (options.protocol === 'https' || options.protocol === 'https:') {
-            console.log('Protocol: HTTPS');
-            options.protocol = 'https:'
-            doRequest = https.request;
-        } else {
-            console.log('Protocol: HTTP');
-            doRequest = http.request;
-        }
 
-        // API Call. response is the response from the API, res is the response we will send back to the user.
-        var apiCall = doRequest(options, function(response) {
-            response.setEncoding('utf-8');
-
+        rest.request(reqURL, options)
+        .on('complete', function(body, response) {
             if (config.debug) {
                 console.log('HEADERS: ' + JSON.stringify(response.headers));
                 console.log('STATUS CODE: ' + response.statusCode);
             };
 
             res.statusCode = response.statusCode;
+            var responseContentType = response.headers['content-type'];
 
-            var body = '';
-
-            response.on('data', function(data) {
-                body += data;
-            })
-
-            response.on('end', function() {
-                delete options.agent;
-
-                var responseContentType = response.headers['content-type'];
-
-                switch (true) {
-                    case /application\/javascript/.test(responseContentType):
-                    case /application\/json/.test(responseContentType):
-                        console.log(util.inspect(body));
-                        // body = JSON.parse(body);
-                        break;
-                    case /application\/xml/.test(responseContentType):
-                    case /text\/xml/.test(responseContentType):
-                    default:
-                }
-
-                // Set Headers and Call
-                req.resultHeaders = response.headers;
-                req.call = url.parse(options.host + options.path);
-                req.call = url.format(req.call);
-
-                // Response body
-                req.result = body;
-
-                console.log(util.inspect(body));
-
-                next();
-            })
-        }).on('error', function(e) {
-            if (config.debug) {
-                console.log('HEADERS: ' + JSON.stringify(res.headers));
-                console.log("Got error: " + e.message);
-                console.log("Error: " + util.inspect(e));
-            };
-        });
-
-        if (sendData.length) {
-            if (config.debug) {
-                console.log("Request Body: " + sendData) 
+            switch (true) {
+                case /application\/javascript/.test(responseContentType):
+                case /application\/json/.test(responseContentType):
+                    console.log(util.inspect(body));
+                    // body = JSON.parse(body);
+                    break;
+                case /application\/xml/.test(responseContentType):
+                case /text\/xml/.test(responseContentType):
+                default:
             }
 
-            options.headers['Content-Length'] = Buffer.byteLength(sendData);
-            apiCall.end(sendData, 'utf-8');
-        }
-        else {
-            apiCall.end();
-        }
+            // Set Headers and Call
+            req.resultHeaders = response.headers;
+            req.call = url.parse(options.host + options.path);
+            req.call = url.format(req.call);
+
+            // Response body
+            req.result = body;
+
+            next();
+        })
+        .on('error', function(err, response) {
+            if (config.debug) {
+                console.log('HEADERS: ' + JSON.stringify(res.headers));
+                console.log("Got error: " + err.message);
+                console.log("Error: " + util.inspect(err));
+            }
+        });
     }
 }
 

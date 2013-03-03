@@ -170,11 +170,6 @@
 
         event.preventDefault();
 
-        var params = $(this).serializeArray(),
-            credentials = $('form#credentials').serializeArray();
-
-        params = params.concat(credentials);
-
         // Setup results container
         var resultContainer = $('.result', self);
         if (resultContainer.length === 0) {
@@ -231,23 +226,34 @@
                 .addClass('response prettyprint'));
         }
 
-        console.log(params);
+        var fd = new FormData(self);
+        var credentials = $('form#credentials').serializeArray();
+        for(i in credentials) {
+            fd.append(credentials[i].name, credentials[i].value);
+        }
 
-        $.post('/processReq', params, function(result, text) {
-            // If we get passed a signin property, open a window to allow the user to signin/link their account
-            if (result.signin) {
-                window.open(result.signin,"_blank","height=900,width=800,menubar=0,resizable=1,scrollbars=1,status=0,titlebar=0,toolbar=0");
-            } else {
-                var response,
-                    responseContentType = result.headers['content-type'];
-                // Format output according to content-type
-                response = livedocs.formatData(result.response, result.headers['content-type'])
+        $.ajax({
+            type: "POST",
+            url: '/processReq',
+            data: fd,
+            processData: false,
+            contentType: false,
+            success: function(result, text) {
 
-                $('pre.response', resultContainer)
-                    .toggleClass('error', false)
-                    .text(response);
+                // If we get passed a signin property, open a window to allow the user to signin/link their account
+                if (result.signin) {
+                    window.open(result.signin,"_blank","height=900,width=800,menubar=0,resizable=1,scrollbars=1,status=0,titlebar=0,toolbar=0");
+                } else {
+                    var response,
+                        responseContentType = result.headers['content-type'];
+                    // Format output according to content-type
+                    response = livedocs.formatData(result.response, result.headers['content-type'])
+
+                    $('pre.response', resultContainer)
+                        .toggleClass('error', false)
+                        .text(response);
+                }
             }
-
         })
         // Complete, runs on error and success
         .complete(function(result, text) {
