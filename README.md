@@ -9,6 +9,11 @@ This fork of [I/O Docs](https://github.com/mashery/iodocs) includes minor code c
 - Support for inclusion of API Key in query string or POST/PUT payload
 - Added `type` value of `list` for method parameters. Use for comma separated values to be sent as an array (i.e. `param[]`)
 
+### Added by Fun Machine
+- Added ability to load the API definition from a URL instead of a local file.  Simply add the key 'apiDefURL' to the API configuration with the full URL as the value, and the API definition will be dynamically loaded with each page visit. Example updated below.
+- Added 'type' value of 'file' for method parameters, which allows files to be posted to the API endpoint.
+- Added 'type' value of 'password' for method parameters, which simply hides the input characters in the API form but is otherwise a standard text field
+
 **Note**: Several areas require more testing. Notably:
 
 - New parameter types: `json`, `readonly`, `list`
@@ -140,7 +145,8 @@ The *apiconfig.json* file contains high-level information about an API.
    "baseURL": "api.lowercase.sample.com",
    "publicPath": "/v1",
    "auth": "key",
-   "keyParam": "api_key_var_name"
+   "keyParam": "api_key_var_name",
+   "apiDefURL": "http://mysite/doc.json"
 }
 ```
 
@@ -178,7 +184,10 @@ Line:
     is added to an API request when the "auth" key value from
     (5) is set to "key"
 
-8. Closing curly-bracket ;)
+8. "apiDefURL" key value will instruct IODocs to retrieve
+    the API definition from this URL instead of a local file.
+
+9. Closing curly-bracket ;)
 
 
 ---
